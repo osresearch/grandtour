@@ -5,6 +5,8 @@ let fps = 60;
 let bodies;
 let t = 0;
 let vels = [];
+let audio;
+let fft;
 
 class Data
 {
@@ -76,11 +78,17 @@ function setup()
 	frameRate(fps);
 	//fullscreen(1);
 
+	fft = new p5.FFT();
+	fft.setInput(audio);
+	audio.loop();
+
 	// planet data from https://ssd.jpl.nasa.gov/horizons.cgi
 }
 
 function preload()
 {
+	audio = loadSound("assets/voyager.mp3");
+
 	bodies = [
 	 	new Data("assets/voyager2.csv", 1, color(255,255,255)),
 	 	new Data("assets/earth.csv", 1, color(0,255,0)),
@@ -107,8 +115,10 @@ function preload()
 //function keyPressed() { }
 
 function reset() {
+	audio.stop();
 	t = 0;
 	vels = [];
+	audio.loop();
 }
 
 function keyPressed()
@@ -131,9 +141,7 @@ function keyPressed()
 
 function draw()
 {
-
 	background(0);
-
 	t++;
 
 	push();
@@ -152,23 +160,23 @@ function draw()
 	text(int(dist / 1e6) + " million km", 10, 40);
 
 	vels.push(vel);
-	if (vels.length > windowWidth)
-		vels.splice(0, vels.length - windowWidth);
+	if (vels.length > width)
+		vels.splice(0, vels.length - width);
 
 	// draw the chart of the velocities
 	textSize(10);
 	textAlign(RIGHT);
-	text(int(vel) + " km/s", windowWidth - 10, windowHeight - 2);
+	text(int(vel) + " km/s", width - 10, height - 2);
 	strokeWeight(1);
 	
 	for(let i = 1 ; i < vels.length ; i++)
 	{
 		stroke(0,0,200, 255 * i / vels.length);
 		line(
-			windowWidth - vels.length + i,
-			windowHeight - vels[i-1],
-			windowWidth - vels.length + i + 1,
-			windowHeight - vels[i]
+			width - vels.length + i,
+			height - vels[i-1],
+			width - vels.length + i + 1,
+			height - vels[i]
 		);
 	
 	}
@@ -178,11 +186,11 @@ function draw()
 	push();
 
 	// compute the scale such that voyager is always on screen
-	let scale = windowHeight / dist / 2.2;
-	translate(windowWidth/2, windowHeight/2);
+	let scale = height / dist / 2.2;
+	translate(width/2, height/2);
 
-	let angle = (mouseY - windowHeight/2) / windowHeight * PI + PI;
-	let angle2 = -(mouseX - windowWidth/2) / windowWidth * PI;
+	let angle = (mouseY - height/2) / height * PI + PI;
+	let angle2 = -(mouseX - width/2) / width * PI;
 
 
 	for(body of bodies)
@@ -192,4 +200,24 @@ function draw()
 	
 
 	pop();
+
+	// draw an FFT spectrum on the bottom left corner
+	let spectrum = fft.analyze(256);
+
+	push();
+
+	noFill();
+	translate(0,3*height/4);
+	for (i = 0; i < 256; i++) {
+		stroke(0,255,0,(255-i)/2);
+		line(
+			map(i, 0, 255, 0, width),
+			map(spectrum[i], 0, 255, height/4, 0),
+			map(i+1, 0, 255, 0, width),
+			map(spectrum[i+1], 0, 255, height/4, 0)
+		);
+	}
+
+	pop();
+
 }
