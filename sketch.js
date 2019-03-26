@@ -143,16 +143,18 @@ function preload()
 	 	new Data("assets/saturn.csv", 15, color(255,120,0)),
 	 	new Data("assets/neptune.csv", 10, color(0,0,255)),
 	 	new Data("assets/uranus.csv", 8, color(100,100,100)),
+	 	new Data("assets/pluto.csv", 4, color(40,40,40)),
 	];
 
 	bodies[0].trail = 128; // mercury
 	bodies[1].trail = 240; // venus
 	bodies[2].trail = 380; // earth
 	bodies[3].trail = 700; // mars
-	bodies[4].trail = 4800;
-	bodies[5].trail = 4800;
-	bodies[6].trail = 4800;
-	bodies[7].trail = 4800;
+	bodies[4].trail = 4800; // jupiter
+	bodies[5].trail = 4800; // saturn
+	bodies[6].trail = 4800; // neptune
+	bodies[7].trail = 4800; // uranus
+	bodies[8].trail = 4800; // pluto (not a planet)
 
 	// voyager is special
 	voyager = new Data("assets/voyager2.csv", 5, color(255,255,255));
