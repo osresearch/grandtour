@@ -185,6 +185,11 @@ function reset() {
 	audio.stop();
 	real_t = 1;
 	vels = [];
+
+	// ensure that we have a decent default view
+	// if no mouse movement happens
+	mouseX = width/2;
+	mouseY = 0;
 	audio.play();
 }
 
