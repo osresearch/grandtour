@@ -4,6 +4,7 @@
 let fps = 60;
 let bodies;
 let t = 0;
+let real_t = 1;
 let vels = [];
 let audio;
 let fft;
@@ -55,11 +56,11 @@ class Data
 			// exagerate the Z by a large factor
 			let x = r[2] * sin(angle2) + r[3] * cos(angle2);
 			let y = -r[2] * cos(angle2) + r[3] * sin(angle2);
-			let y2 = -y * sin(angle) + r[4] * cos(angle) * 4;
+			let y2 = -y * sin(angle) + r[4] * cos(angle) * 5;
 
 			let ox = or[2] * sin(angle2) + or[3] * cos(angle2);
 			let oy = -or[2] * cos(angle2) + or[3] * sin(angle2);
-			let oy2 = -oy * sin(angle) + or[4] * cos(angle) * 4;
+			let oy2 = -oy * sin(angle) + or[4] * cos(angle) * 5;
 
 			line(
 				ox * scale,
@@ -85,7 +86,7 @@ function setup()
 
 	fft = new p5.FFT();
 	fft.setInput(audio);
-	audio.loop();
+	audio.play();
 }
 
 function preload()
@@ -121,9 +122,9 @@ function preload()
 
 function reset() {
 	audio.stop();
-	t = 0;
+	real_t = 1;
 	vels = [];
-	audio.loop();
+	audio.play();
 }
 
 function keyPressed()
@@ -147,30 +148,57 @@ function keyPressed()
 function draw()
 {
 	background(0);
-	t++;
+/*
+	else
+	if (real_t < 1000)
+		real_t += 1.0;
+	else
+		real_t += 1.5;
+*/
+
+	t = int(real_t);
 
 	// draw the most recent audio data as they are received
 	// round to the nearest 380 samples at 48 KHz.
-	// each frame has 
-	let offset = int(audio._lastPos * 48000 / audio.sampleRate() / scanline) - height;
+	let offset = int(audio._lastPos * 48000 / audio.sampleRate() / scanline);
+
+	real_t = offset * 4800 / 32700;
+	if (real_t < 0)
+		real_t = 0;
+	if (real_t > 4800)
+		reset();
+	t = int(real_t);
 
 	push();
+	translate(0, height - scanline);
+
 	image(img,
-		width - scanline, // dx,dy: upper-right corner
+		// dx,dy: bottom left corner
 		0,
-		scanline, // dw,dh: fill the screen
-		height,
-		0, // sx,sy: starting at the current scanline
-		offset, 
-		scanline, // sw,sh: one scanline, half the height
-		height
+		0,
+		width, // dw,dh: fill the bottom screen
+		scanline,
+		offset - width, // sx,sy: starting at the current scanline
+		0, 
+		width, // sw,sh: one scanline, half the height
+		scanline,
 	);
+
+	// fade it into the black
+/*
+	noStroke();
+	for(let x = 0 ; x < 255 ; x++)
+	{
+		fill(0,0,0,256 - x);
+		rect(x,0,x+1,scanline*2);
+	}
+*/
 	pop();
 
 	push();
 	fill(255,255,255);
-	textSize(20);
-	text(bodies[0].table.get(t, 1), 10, 20);
+	textSize(24);
+	text(bodies[0].table.get(t, 1) + " " + real_t, 10, 20) ;
 
 	let x = bodies[0].table.get(t, 2);
 	let y = bodies[0].table.get(t, 3);
@@ -180,6 +208,7 @@ function draw()
 	let vz = bodies[0].table.get(t, 7);
 	let dist = sqrt(x*x + y*y + z*z);
 	let vel = sqrt(vx*vx + vy*vy + vz*vz);
+	textSize(20);
 	text(int(dist / 1e6) + " million km", 10, 40);
 	pop();
 
@@ -189,24 +218,28 @@ function draw()
 		vels.splice(0, vels.length - 255);
 
 	// draw the chart of the velocities
+	// max velocity is around 50, so 256
 	push();
-	translate(width - 256*4 - scanline, height - height/4);
-	textSize(10);
+	translate(width - 256, 0);
+	textSize(20);
 	textAlign(RIGHT);
-	color(255,255,255);
-	text(int(vel) + " km/s", 0, 0); //256*4-10, 10);
+	fill(255,255,255);
+	text(int(vel*3600) + " km/h", 256, 30);
+
+/*
 	strokeWeight(2);
 	
 	for(let i = 1 ; i < vels.length ; i++)
 	{
 		stroke(0,0,200, 255 * i / vels.length);
 		line(
-			(255 - vels.length + i) * 4,
-			height/4 - vels[i-1] * height / 4 / 50,
-			(256 - vels.length + i) * 4,
-			height/4 - vels[i] * height / 4 / 50
+			vels[i] * 4,
+			(vels.length - i) * 4,
+			vels[i-1] * 4,
+			(vels.length - i) * 4,
 		);
 	}
+*/
 
 	pop();
 
@@ -234,10 +267,10 @@ function draw()
 	push();
 
 	noFill();
-	strokeWeight(1);
+	strokeWeight(3);
 	translate(0,3*height/4);
 	for (i = 0; i < 256; i++) {
-		stroke(0,255,0,(255-i));
+		stroke(255,255,0,(255-i)/2);
 		line(
 			map(i, 0, 255, 0, width),
 			map(spectrum[i], 0, 255, height/4, 0),
