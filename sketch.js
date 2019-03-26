@@ -13,18 +13,19 @@ class Data
 		this.table = loadTable(filename, 'csv', 'header');
 		this.radius = radius;
 		this.color = color;
-		this.trail = 256;
+		this.trail = 255;
 		this.decay = 1;
 	}
 
-	draw(t, scale, angle)
+	draw(t, scale, angle, angle2)
 	{
 		// draw a decaying trail of points
 		push();
-		strokeWeight(this.radius);
+		let weight = this.radius;
 
 		let or = this.table.rows[t].arr;
-		for(let i = 1 ; i < this.trail ; i++)
+		let skip = t > this.trail ? int(this.trail / 256) + 1 : 1;
+		for(let i = 1 ; i < this.trail ; i += skip)
 		{
 			if (t - i < 0)
 				break;
@@ -40,16 +41,24 @@ class Data
 			}
 
 			stroke(c);
+			strokeWeight(weight);
+			if (this.decay)
+				weight *= 0.995;
 
 			// mix the Y and Z based on the rotation angle
-			let y = r[3] * sin(angle) + r[4] * cos(angle);
-			let oy = or[3] * sin(angle) + or[4] * cos(angle);
+			let x = r[2] * sin(angle2) + r[3] * cos(angle2);
+			let y = -r[2] * cos(angle2) + r[3] * sin(angle2);
+			let y2 = -y * sin(angle) + r[4] * cos(angle);
+
+			let ox = or[2] * sin(angle2) + or[3] * cos(angle2);
+			let oy = -or[2] * cos(angle2) + or[3] * sin(angle2);
+			let oy2 = -oy * sin(angle) + or[4] * cos(angle);
 
 			line(
-				or[2] * scale,
-				oy * scale,
-				r[2] * scale,
-				y * scale,
+				ox * scale,
+				oy2 * scale,
+				x * scale,
+				y2 * scale,
 			);
 
 			or = r;
@@ -65,6 +74,7 @@ function setup()
 	//createCanvas(windowWidth, windowHeight, WEBGL); // WEBGL doesn't work
 	background(0);
 	frameRate(fps);
+	//fullscreen(1);
 
 	// planet data from https://ssd.jpl.nasa.gov/horizons.cgi
 }
@@ -77,34 +87,51 @@ function preload()
 	 	new Data("assets/mercury.csv", 0.5, color(80,100,100)),
 	 	new Data("assets/venus.csv", 0.5, color(100,100,0)),
 	 	new Data("assets/mars.csv", 0.5, color(255,0,0)),
-	 	new Data("assets/jupiter.csv", 3, color(255,0,255)),
-	 	new Data("assets/saturn.csv", 2, color(255,120,0)),
-	 	new Data("assets/neptune.csv", 1, color(0,0,255)),
+	 	new Data("assets/jupiter.csv", 5, color(255,0,255)),
+	 	new Data("assets/saturn.csv", 4, color(255,120,0)),
+	 	new Data("assets/neptune.csv", 2, color(0,0,255)),
 	 	new Data("assets/uranus.csv", 1, color(100,100,100)),
 	];
 
 	bodies[0].decay = 0;
-	bodies[0].trail = 8192;
+	bodies[0].trail = 8192; // voyager itself
 	bodies[2].trail = 64; // mercury
 	bodies[3].trail = 128; // venus
-	bodies[5].trail = 4096;
-	bodies[6].trail = 4096;
-	bodies[7].trail = 4096;
-	bodies[8].trail = 4096;
+	bodies[5].trail = 1024;
+	bodies[6].trail = 1024;
+	bodies[7].trail = 1024;
+	bodies[8].trail = 1024;
 }
 
 //function keyReleased() { }
 //function keyPressed() { }
-//function mousePressed() { }
 
-function keyPressed() {
+function reset() {
 	t = 0;
 	vels = [];
+}
+
+function keyPressed()
+{
+	if (key == 'F')
+	{
+		console.log("Fullscreen!");
+		fullscreen(1);
+		resizeCanvas(windowWidth, windowHeight);
+	} else
+	if (keyCode == ESCAPE)
+	{
+		fullscreen(0);
+		resizeCanvas(windowWidth, windowHeight);
+	} else
+	if (key == ' ')
+		reset();
 }
 
 
 function draw()
 {
+
 	background(0);
 
 	t++;
@@ -133,10 +160,10 @@ function draw()
 	textAlign(RIGHT);
 	text(int(vel) + " km/s", windowWidth - 10, windowHeight - 2);
 	strokeWeight(1);
-	stroke(0,0,200);
 	
 	for(let i = 1 ; i < vels.length ; i++)
 	{
+		stroke(0,0,200, 255 * i / vels.length);
 		line(
 			windowWidth - vels.length + i,
 			windowHeight - vels[i-1],
@@ -155,11 +182,12 @@ function draw()
 	translate(windowWidth/2, windowHeight/2);
 
 	let angle = (mouseY - windowHeight/2) / windowHeight * PI + PI;
+	let angle2 = -(mouseX - windowWidth/2) / windowWidth * PI;
 
 
 	for(body of bodies)
 	{
-		body.draw(t, scale, angle);
+		body.draw(t, scale, angle, angle2);
 	}
 	
 
