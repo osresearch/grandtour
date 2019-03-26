@@ -7,6 +7,10 @@ let t = 0;
 let vels = [];
 let audio;
 let fft;
+let img;
+
+// size of the frames
+let scanline = 384;
 
 class Data
 {
@@ -48,13 +52,14 @@ class Data
 				weight *= 0.995;
 
 			// mix the Y and Z based on the rotation angle
+			// exagerate the Z by a large factor
 			let x = r[2] * sin(angle2) + r[3] * cos(angle2);
 			let y = -r[2] * cos(angle2) + r[3] * sin(angle2);
-			let y2 = -y * sin(angle) + r[4] * cos(angle);
+			let y2 = -y * sin(angle) + r[4] * cos(angle) * 4;
 
 			let ox = or[2] * sin(angle2) + or[3] * cos(angle2);
 			let oy = -or[2] * cos(angle2) + or[3] * sin(angle2);
-			let oy2 = -oy * sin(angle) + or[4] * cos(angle);
+			let oy2 = -oy * sin(angle) + or[4] * cos(angle) * 4;
 
 			line(
 				ox * scale,
@@ -81,24 +86,24 @@ function setup()
 	fft = new p5.FFT();
 	fft.setInput(audio);
 	audio.loop();
-
-	// planet data from https://ssd.jpl.nasa.gov/horizons.cgi
 }
 
 function preload()
 {
 	audio = loadSound("assets/voyager.mp3");
+	img = loadImage("assets/frame.jpg");
 
+	// planet data from https://ssd.jpl.nasa.gov/horizons.cgi
 	bodies = [
-	 	new Data("assets/voyager2.csv", 1, color(255,255,255)),
-	 	new Data("assets/earth.csv", 1, color(0,255,0)),
-	 	new Data("assets/mercury.csv", 0.5, color(80,100,100)),
-	 	new Data("assets/venus.csv", 0.5, color(100,100,0)),
-	 	new Data("assets/mars.csv", 0.5, color(255,0,0)),
-	 	new Data("assets/jupiter.csv", 5, color(255,0,255)),
-	 	new Data("assets/saturn.csv", 4, color(255,120,0)),
-	 	new Data("assets/neptune.csv", 2, color(0,0,255)),
-	 	new Data("assets/uranus.csv", 1, color(100,100,100)),
+	 	new Data("assets/voyager2.csv", 5, color(255,255,255)),
+	 	new Data("assets/earth.csv", 5, color(0,255,0)),
+	 	new Data("assets/mercury.csv", 2, color(80,100,100)),
+	 	new Data("assets/venus.csv", 4, color(100,100,0)),
+	 	new Data("assets/mars.csv", 5, color(255,0,0)),
+	 	new Data("assets/jupiter.csv", 20, color(255,0,255)),
+	 	new Data("assets/saturn.csv", 25, color(255,120,0)),
+	 	new Data("assets/neptune.csv", 10, color(0,0,255)),
+	 	new Data("assets/uranus.csv", 8, color(100,100,100)),
 	];
 
 	bodies[0].decay = 0;
@@ -144,6 +149,24 @@ function draw()
 	background(0);
 	t++;
 
+	// draw the most recent audio data as they are received
+	// round to the nearest 380 samples at 48 KHz.
+	// each frame has 
+	let offset = int(audio._lastPos * 48000 / audio.sampleRate() / scanline) - height;
+
+	push();
+	image(img,
+		width - scanline, // dx,dy: upper-right corner
+		0,
+		scanline, // dw,dh: fill the screen
+		height,
+		0, // sx,sy: starting at the current scanline
+		offset, 
+		scanline, // sw,sh: one scanline, half the height
+		height
+	);
+	pop();
+
 	push();
 	fill(255,255,255);
 	textSize(20);
@@ -158,27 +181,31 @@ function draw()
 	let dist = sqrt(x*x + y*y + z*z);
 	let vel = sqrt(vx*vx + vy*vy + vz*vz);
 	text(int(dist / 1e6) + " million km", 10, 40);
+	pop();
 
+	// keep the last 256 velocities
 	vels.push(vel);
-	if (vels.length > width)
-		vels.splice(0, vels.length - width);
+	if (vels.length > 256)
+		vels.splice(0, vels.length - 255);
 
 	// draw the chart of the velocities
+	push();
+	translate(width - 256*4 - scanline, height - height/4);
 	textSize(10);
 	textAlign(RIGHT);
-	text(int(vel) + " km/s", width - 10, height - 2);
-	strokeWeight(1);
+	color(255,255,255);
+	text(int(vel) + " km/s", 0, 0); //256*4-10, 10);
+	strokeWeight(2);
 	
 	for(let i = 1 ; i < vels.length ; i++)
 	{
 		stroke(0,0,200, 255 * i / vels.length);
 		line(
-			width - vels.length + i,
-			height - vels[i-1],
-			width - vels.length + i + 1,
-			height - vels[i]
+			(255 - vels.length + i) * 4,
+			height/4 - vels[i-1] * height / 4 / 50,
+			(256 - vels.length + i) * 4,
+			height/4 - vels[i] * height / 4 / 50
 		);
-	
 	}
 
 	pop();
@@ -207,9 +234,10 @@ function draw()
 	push();
 
 	noFill();
+	strokeWeight(1);
 	translate(0,3*height/4);
 	for (i = 0; i < 256; i++) {
-		stroke(0,255,0,(255-i)/2);
+		stroke(0,255,0,(255-i));
 		line(
 			map(i, 0, 255, 0, width),
 			map(spectrum[i], 0, 255, height/4, 0),
