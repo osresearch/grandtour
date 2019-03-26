@@ -5,6 +5,9 @@ let fps = 60;
 let bodies;
 let t = 0;
 let real_t = 1;
+let velx = [];
+let vely = [];
+let velz = [];
 let vels = [];
 let audio;
 let fft;
@@ -184,6 +187,9 @@ function preload()
 function reset() {
 	audio.stop();
 	real_t = 1;
+	velx = [];
+	vely = [];
+	velz = [];
 	vels = [];
 
 	// ensure that we have a decent default view
@@ -267,7 +273,7 @@ function draw()
 	fill(255,255,255);
 	textSize(48);
 	textAlign(CENTER);
-	text(voyager.table.get(t, 1), width/2, 50) ;
+	text(voyager.table.get(t, 1).substr(5,12), width/2, 50) ;
 
 	let x = voyager.table.get(t, 2);
 	let y = voyager.table.get(t, 3);
@@ -280,9 +286,17 @@ function draw()
 	pop();
 
 	// keep the last 256 velocities
+	velx.push(vx);
+	vely.push(vy);
+	velz.push(vz);
 	vels.push(vel);
 	if (vels.length > 256)
+	{
+		velx.splice(0, velx.length - 255);
+		vely.splice(0, vely.length - 255);
+		velz.splice(0, velz.length - 255);
 		vels.splice(0, vels.length - 255);
+	}
 
 	// draw the chart of the velocities
 	// max velocity is around 50, so 256
@@ -300,9 +314,44 @@ function draw()
 
 	strokeWeight(2);
 	
+	// draw vx, vy and vz
+	noFill();
+	beginShape();
+	stroke(100,0,0, 30);
+	for(let i = 0 ; i < velx.length ; i++)
+	{
+		vertex(
+			(256 - velx.length + i) * 4,
+			(50 - abs(velx[i])) * 8,
+		);
+	}
+	endShape();
+
+	beginShape();
+	stroke(0,100,0, 30);
+	for(let i = 0 ; i < vely.length ; i++)
+	{
+		vertex(
+			(256 - vely.length + i) * 4,
+			(50 - abs(vely[i])) * 8,
+		);
+	}
+	endShape();
+
+	beginShape();
+	stroke(0,0,100, 30);
+	for(let i = 1 ; i < velz.length ; i++)
+	{
+		vertex(
+			(256 - velz.length + i) * 4,
+			(50 - abs(velz[i])) * 8,
+		);
+	}
+	endShape();
+
 	for(let i = 1 ; i < vels.length ; i++)
 	{
-		stroke(0,0,200, 255 * i / vels.length);
+		stroke(200,200,0, 255 * i / vels.length);
 		line(
 			(256 - vels.length + i) * 4,
 			(50 - vels[i]) * 8,
