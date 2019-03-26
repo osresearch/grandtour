@@ -9,6 +9,7 @@ let vels = [];
 let audio;
 let fft;
 let img;
+let voyager;
 
 // size of the frames
 let scanline = 384;
@@ -30,6 +31,7 @@ class Data
 		push();
 		let weight = this.radius;
 
+/*
 		let or = this.table.rows[t].arr;
 		let skip = t > this.trail ? int(this.trail / 256) + 1 : 1;
 		for(let i = 1 ; i < this.trail ; i += skip)
@@ -71,8 +73,45 @@ class Data
 
 			or = r;
 		}
+*/
+		// exagerate Z scale by a lot
+		let zscale = 8;
 
+		// draw the entire orbit very faintly
+		let c = color(this.color);
+		c.setAlpha(30);
+
+		noFill();
+		strokeWeight(1);
+		stroke(c);
+		beginShape();
+		for(let i = 0 ; i < this.trail ; i += 2)
+		{
+			let r = this.table.rows[i].arr;
+			let x = r[2] * sin(angle2) + r[3] * cos(angle2);
+			let y = -r[2] * cos(angle2) + r[3] * sin(angle2);
+			let y2 = -y * sin(angle) + r[4] * cos(angle) * zscale;
+
+			vertex(x * scale, y2 * scale);
+		}
+		endShape();
+		c.setAlpha(255);
+
+		// Draw the planet itself
+		let r = this.table.rows[t].arr;
+		let x = r[2] * sin(angle2) + r[3] * cos(angle2);
+		let y = -r[2] * cos(angle2) + r[3] * sin(angle2);
+		let y2 = -y * sin(angle) + r[4] * cos(angle) * zscale;
+		this.draw_self(x*scale, y2*scale);
 		pop();
+	}
+
+	
+	draw_self(x,y)
+	{
+		stroke(this.color);
+		strokeWeight(this.radius * 4);
+		point(x, y);
 	}
 }
 
@@ -96,25 +135,45 @@ function preload()
 
 	// planet data from https://ssd.jpl.nasa.gov/horizons.cgi
 	bodies = [
-	 	new Data("assets/voyager2.csv", 5, color(255,255,255)),
-	 	new Data("assets/earth.csv", 5, color(0,255,0)),
 	 	new Data("assets/mercury.csv", 2, color(80,100,100)),
 	 	new Data("assets/venus.csv", 4, color(100,100,0)),
+	 	new Data("assets/earth.csv", 5, color(0,255,0)),
 	 	new Data("assets/mars.csv", 5, color(255,0,0)),
 	 	new Data("assets/jupiter.csv", 20, color(255,0,255)),
-	 	new Data("assets/saturn.csv", 25, color(255,120,0)),
+	 	new Data("assets/saturn.csv", 15, color(255,120,0)),
 	 	new Data("assets/neptune.csv", 10, color(0,0,255)),
 	 	new Data("assets/uranus.csv", 8, color(100,100,100)),
 	];
 
-	bodies[0].decay = 0;
-	bodies[0].trail = 8192; // voyager itself
-	bodies[2].trail = 64; // mercury
-	bodies[3].trail = 128; // venus
-	bodies[5].trail = 1024;
-	bodies[6].trail = 1024;
-	bodies[7].trail = 1024;
-	bodies[8].trail = 1024;
+	bodies[0].trail = 128; // mercury
+	bodies[1].trail = 240; // venus
+	bodies[2].trail = 380; // earth
+	bodies[3].trail = 700; // mars
+	bodies[4].trail = 4800;
+	bodies[5].trail = 4800;
+	bodies[6].trail = 4800;
+	bodies[7].trail = 4800;
+
+	// voyager is special
+	voyager = new Data("assets/voyager2.csv", 5, color(255,255,255));
+	let voyager_img = loadImage("assets/voyager.svg");
+
+	// voyage has its own draw function with an image
+	voyager.decay = 0;
+	voyager.draw_self = function(x,y)
+	{
+		stroke(255,255,255);
+		strokeWeight(1);
+		image(voyager_img,
+			x - voyager_img.width/8,
+			y - voyager_img.height/8,
+			voyager_img.width/4,
+			voyager_img.height/4,
+		);
+	};
+
+	// ensure it goes on last so that it is always on top
+	bodies.push(voyager);
 }
 
 //function keyReleased() { }
@@ -169,6 +228,8 @@ function draw()
 		reset();
 	t = int(real_t);
 
+	voyager.trail = t; // draw all the points for voyager
+
 	push();
 	translate(0, height - scanline);
 
@@ -197,19 +258,18 @@ function draw()
 
 	push();
 	fill(255,255,255);
-	textSize(24);
-	text(bodies[0].table.get(t, 1) + " " + real_t, 10, 20) ;
+	textSize(48);
+	textAlign(CENTER);
+	text(voyager.table.get(t, 1), width/2, 50) ;
 
-	let x = bodies[0].table.get(t, 2);
-	let y = bodies[0].table.get(t, 3);
-	let z = bodies[0].table.get(t, 4);
-	let vx = bodies[0].table.get(t, 5);
-	let vy = bodies[0].table.get(t, 6);
-	let vz = bodies[0].table.get(t, 7);
+	let x = voyager.table.get(t, 2);
+	let y = voyager.table.get(t, 3);
+	let z = voyager.table.get(t, 4);
+	let vx = voyager.table.get(t, 5);
+	let vy = voyager.table.get(t, 6);
+	let vz = voyager.table.get(t, 7);
 	let dist = sqrt(x*x + y*y + z*z);
 	let vel = sqrt(vx*vx + vy*vy + vz*vz);
-	textSize(20);
-	text(int(dist / 1e6) + " million km", 10, 40);
 	pop();
 
 	// keep the last 256 velocities
@@ -220,26 +280,29 @@ function draw()
 	// draw the chart of the velocities
 	// max velocity is around 50, so 256
 	push();
-	translate(width - 256, 0);
+	translate(width - 1024, 0);
 	textSize(20);
 	textAlign(RIGHT);
 	fill(255,255,255);
-	text(int(vel*3600) + " km/h", 256, 30);
 
-/*
+	// speed goes along with the velocity graph
+	text(int(vel*3600) + " km/h", 1024, (50 - vel) * 8);
+
+	// distance goes to 5000 million km at the top of the screen
+	text(int(dist / 1e6) + " million km", 1024, height * (1 - (dist / 5000e6)));
+
 	strokeWeight(2);
 	
 	for(let i = 1 ; i < vels.length ; i++)
 	{
 		stroke(0,0,200, 255 * i / vels.length);
 		line(
-			vels[i] * 4,
-			(vels.length - i) * 4,
-			vels[i-1] * 4,
-			(vels.length - i) * 4,
+			(256 - vels.length + i) * 4,
+			(50 - vels[i]) * 8,
+			(255 - vels.length + i) * 4,
+			(50 - vels[i-1]) * 8,
 		);
 	}
-*/
 
 	pop();
 
@@ -267,10 +330,10 @@ function draw()
 	push();
 
 	noFill();
-	strokeWeight(3);
+	strokeWeight(4);
 	translate(0,3*height/4);
 	for (i = 0; i < 256; i++) {
-		stroke(255,255,0,(255-i)/2);
+		stroke(255,255,255,(255-i)/2);
 		line(
 			map(i, 0, 255, 0, width),
 			map(spectrum[i], 0, 255, height/4, 0),
