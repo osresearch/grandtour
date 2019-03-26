@@ -4,6 +4,7 @@
 let fps = 60;
 let bodies;
 let t = 0;
+let vels = [];
 
 class Data
 {
@@ -60,8 +61,8 @@ class Data
 
 function setup()
 {
-	//createCanvas(windowWidth-10, windowHeight-10);
-	createCanvas(windowWidth, windowHeight); // WEBGL doesn't work
+	createCanvas(windowWidth, windowHeight);
+	//createCanvas(windowWidth, windowHeight, WEBGL); // WEBGL doesn't work
 	background(0);
 	frameRate(fps);
 
@@ -81,6 +82,15 @@ function preload()
 	 	new Data("assets/neptune.csv", 1, color(0,0,255)),
 	 	new Data("assets/uranus.csv", 1, color(100,100,100)),
 	];
+
+	bodies[0].decay = 0;
+	bodies[0].trail = 8192;
+	bodies[2].trail = 64; // mercury
+	bodies[3].trail = 128; // venus
+	bodies[5].trail = 4096;
+	bodies[6].trail = 4096;
+	bodies[7].trail = 4096;
+	bodies[8].trail = 4096;
 }
 
 //function keyReleased() { }
@@ -89,6 +99,7 @@ function preload()
 
 function keyPressed() {
 	t = 0;
+	vels = [];
 }
 
 
@@ -97,13 +108,6 @@ function draw()
 	background(0);
 
 	t++;
-	bodies[0].decay = 0;
-	bodies[0].trail = 8192;
-	bodies[2].trail = 128; // mercury
-	bodies[5].trail = 4096;
-	bodies[6].trail = 4096;
-	bodies[7].trail = 4096;
-	bodies[8].trail = 4096;
 
 	push();
 	fill(255,255,255);
@@ -119,7 +123,32 @@ function draw()
 	let dist = sqrt(x*x + y*y + z*z);
 	let vel = sqrt(vx*vx + vy*vy + vz*vz);
 	text(int(dist / 1e6) + " million km", 10, 40);
-	text(int(vel) + " km/s", 10, 60);
+
+	vels.push(vel);
+	if (vels.length > windowWidth)
+		vels.splice(0, vels.length - windowWidth);
+
+	// draw the chart of the velocities
+	textSize(10);
+	textAlign(RIGHT);
+	text(int(vel) + " km/s", windowWidth - 10, windowHeight - 2);
+	strokeWeight(1);
+	stroke(0,0,200);
+	
+	for(let i = 1 ; i < vels.length ; i++)
+	{
+		line(
+			windowWidth - vels.length + i,
+			windowHeight - vels[i-1],
+			windowWidth - vels.length + i + 1,
+			windowHeight - vels[i]
+		);
+	
+	}
+
+	pop();
+
+	push();
 
 	// compute the scale such that voyager is always on screen
 	let scale = windowHeight / dist / 2.2;
