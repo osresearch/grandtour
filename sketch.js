@@ -201,7 +201,7 @@ function reset() {
 
 function keyPressed()
 {
-	if (key == 'F')
+	if (key == 'f')
 	{
 		console.log("Fullscreen!");
 		fullscreen(1);
