@@ -82,7 +82,7 @@ class Data
 
 		// draw the entire orbit very faintly
 		let c = color(this.color);
-		c.setAlpha(30);
+		c.setAlpha(90);
 
 		noFill();
 		strokeWeight(1);
